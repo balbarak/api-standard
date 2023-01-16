@@ -79,10 +79,12 @@ namespace Spoiler.Api.Controllers
         ///
         ///     GET /api/v1/blog/any-id-goes-here (Return 200)
         /// 
-        ///     GET /api/v1/blog/1 (Return 404)
+        ///     GET /api/v1/blog/404 (Return 404)
+        ///     
+        ///     GET /api/v1/blog/500 (Return 500)
         ///     
         /// </remarks>
-        /// <response code="200">GET Returns blog item</response>
+        /// <response code="200">Returns blog item</response>
         /// <response code="404">Item not found.</response>
         /// <response code="500">General server error.</response>
         [Route("{id}")]
@@ -90,7 +92,7 @@ namespace Spoiler.Api.Controllers
         
         public IActionResult Get(string id)
         {
-            if (id == "1")
+            if (id == "404")
             {
                 return NotFound("Blog not found");
             }
