@@ -16,24 +16,24 @@ namespace Spoiler.Api.Controllers
         /// <remarks>
         /// Sample request:
         ///
-        ///     POST /Create (Return 201)
+        ///     POST /api/v1/blog/create (Return 201)
         ///     {
         ///        "title": "Title goes here",
         ///        "description": "Description goes here",
         ///     }
         /// 
-        ///     POST /Create (Return 412)
+        ///     POST /api/v1/blog/create (Return 412)
         ///     {
         ///        "title": "Title goes here",
         ///     }
         ///     
-        ///     POST /Create (Return 400)
+        ///     POST /api/v1/blog/create (Return 400)
         ///     {
         ///         "title": "no",
         ///         "description":"ok"
         ///     }
         /// 
-        ///     POST /Create (Return 500)
+        ///     POST /api/v1/blog/create (Return 500)
         ///     {
         ///        "title": "500",
         ///        "description": "Description goes here",
@@ -52,59 +52,61 @@ namespace Spoiler.Api.Controllers
         {
             if (!ModelState.IsValid)
             {
-                return GetModelStateErrors();
+                return ValidationProblem(statusCode:412);
             }
 
             if (model.Title == "no")
             {
-                return GetError("title already exist.",300);
+                return Problem("Blog is already exist !",statusCode:400);
             }
 
             if (model.Title == "500")
             {
-                return GetError("Something went wrong.",500,100);
+                return Problem("Something went wrong !",statusCode:500);
             }
 
             return Created(Request.Path, model);
         }
+
+
+        /// <summary>
+        /// Get blog by id
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns></returns>
+        /// <remarks>
+        /// Sample requests:
+        ///
+        ///     GET /api/v1/blog/any-id-goes-here (Return 200)
+        /// 
+        ///     GET /api/v1/blog/1 (Return 404)
+        ///     
+        /// </remarks>
+        /// <response code="200">GET Returns blog item</response>
+        /// <response code="404">Item not found.</response>
+        /// <response code="500">General server error.</response>
+        [Route("{id}")]
+        [HttpGet]
         
-        protected ObjectResult GetModelStateErrors()
+        public IActionResult Get(string id)
         {
-            var error = new ValidationProblemDetails(ModelState)
+            if (id == "1")
             {
-                Instance = HttpContext.Request.Path,
-                Type = "https://httpstatuses.com/412",
-                Title = "One or more validation errors occurred.",
-                Status = 412
+                return NotFound("Blog not found");
+            }
+
+            if (id == "500")
+            {
+                return Problem("Something went wrong !",statusCode:500);
+            }
+
+            var model = new Blog()
+            {
+                Title = "Here you go !",
+                Description = "You must do it in the right way! no exception"
             };
 
-            var model = error.ToModel();
-
-            return new ObjectResult(model)
-            {
-                ContentTypes = { "application/problem+json" },
-                StatusCode = 412
-            };
-
-            //return result;
-        }
-
-        protected ObjectResult GetError(string message = null, int statusCode = 400,int applicationErrorCode = 100)
-        {
-            var problem = new ValidationProblemDetails()
-            {
-                Title = message ?? "Unkown error.",
-                Instance = HttpContext.Request.Path,
-                Type = $"https://httpstatuses.com/{statusCode}",
-            };
-
-            var model = problem.ToModel(applicationErrorCode);
-
-            return new ObjectResult(model)
-            {
-                ContentTypes = { "application/problem+json" },
-                StatusCode = statusCode,
-            };
+            return Ok(model);
         }
     }
 }
