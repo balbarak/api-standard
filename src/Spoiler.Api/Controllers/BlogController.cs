@@ -8,11 +8,6 @@ namespace Spoiler.Api.Controllers
     [Produces("application/json")]
     public class BlogController : ControllerBase
     {
-        private const string NOT_FOUND_TEXT = "Blog not found.";
-        private const string GENERAL_EXCEPTION_TEXT = "Something went wrong!";
-        private const string BLOG_ALREADY_EXISTS_TEXT = "The Blog already exists!";
-        private const string BLOG_CAN_NOT_BE_DELETED_TEXT = "This Blog cannot be deleted!";
-
         /// <summary>
         /// Create a new blog.
         /// </summary>
@@ -58,10 +53,10 @@ namespace Spoiler.Api.Controllers
                 return ValidationProblem(statusCode: StatusCodes.Status400BadRequest);
 
             if (newBlog.Title == "no")
-                return Problem(BLOG_ALREADY_EXISTS_TEXT, statusCode: StatusCodes.Status400BadRequest);
+                return Problem(MessagesText.BLOG_ALREADY_EXISTS, statusCode: StatusCodes.Status400BadRequest);
 
             if (Requested500Response(newBlog.Title!))
-                return Problem(GENERAL_EXCEPTION_TEXT, statusCode: StatusCodes.Status500InternalServerError);
+                return Problem(MessagesText.GENERAL_EXCEPTION, statusCode: StatusCodes.Status500InternalServerError);
 
             var responseDto = Blog.Create(newBlog);
 
@@ -105,7 +100,7 @@ namespace Spoiler.Api.Controllers
         public IActionResult Update([FromBody] Blog blogToUpdate)
         {
             if (Requested500Response(blogToUpdate?.Id!))
-                return Problem(GENERAL_EXCEPTION_TEXT, statusCode: StatusCodes.Status500InternalServerError);
+                return Problem(MessagesText.GENERAL_EXCEPTION, statusCode: StatusCodes.Status500InternalServerError);
 
             if (!ModelState.IsValid)
                 return ValidationProblem(statusCode: StatusCodes.Status400BadRequest);
@@ -113,7 +108,7 @@ namespace Spoiler.Api.Controllers
             var updatedBlog = Blog.Update(blogToUpdate);
 
             if(updatedBlog is null)
-                return NotFound(NOT_FOUND_TEXT);
+                return NotFound(MessagesText.BLOG_NOT_FOUND);
 
             return Ok(new BlogDto(updatedBlog));
         }
@@ -140,12 +135,12 @@ namespace Spoiler.Api.Controllers
         public IActionResult Get(string id)
         {
             if (Requested500Response(id))
-                return Problem(GENERAL_EXCEPTION_TEXT, statusCode: StatusCodes.Status500InternalServerError);
+                return Problem(MessagesText.GENERAL_EXCEPTION, statusCode: StatusCodes.Status500InternalServerError);
 
             var foundBlog = Blog.GetById(id);
 
             if (foundBlog is null)
-                return NotFound(NOT_FOUND_TEXT);
+                return NotFound(MessagesText.BLOG_NOT_FOUND);
 
             return Ok(new BlogDto(foundBlog));
         }
@@ -175,20 +170,15 @@ namespace Spoiler.Api.Controllers
         public IActionResult Delete(string id)
         {
             if (Requested500Response(id))
-                return Problem(GENERAL_EXCEPTION_TEXT, statusCode: StatusCodes.Status500InternalServerError);
+                return Problem(MessagesText.GENERAL_EXCEPTION, statusCode: StatusCodes.Status500InternalServerError);
 
-            if(Requested400BusinessLogicError(id))
-                return Problem(BLOG_CAN_NOT_BE_DELETED_TEXT, statusCode: StatusCodes.Status400BadRequest);
+            if(!Blog.CanBeDeleted(id))
+                return Problem(MessagesText.BLOG_CAN_NOT_BE_DELETED, statusCode: StatusCodes.Status400BadRequest);
 
             if (!Blog.BLOGS.Remove(Blog.GetById(id)!))
-                return NotFound(NOT_FOUND_TEXT);
+                return NotFound(MessagesText.BLOG_NOT_FOUND);
 
             return NoContent();
-        }
-
-        private static bool Requested400BusinessLogicError(string id)
-        {
-            return id == Blog.DEFAULT_BLOG_ID;
         }
 
         private static bool Requested500Response(string indicator)

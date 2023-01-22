@@ -66,6 +66,11 @@ namespace Spoiler.Api.Models
 
             return foundBlog;
         }
+
+        public static bool CanBeDeleted(string id)
+        {
+            return id != DEFAULT_BLOG_ID;
+        }
     }
 
     public class CreateBlogRequest
