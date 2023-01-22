@@ -8,10 +8,10 @@ namespace Spoiler.Api.Controllers
     [Produces("application/json")]
     public class BlogController : ControllerBase
     {
-        private static readonly List<Blog> _blogs = new();
         private const string NOT_FOUND_TEXT = "Blog not found.";
         private const string GENERAL_EXCEPTION_TEXT = "Something went wrong!";
         private const string BLOG_ALREADY_EXISTS_TEXT = "The Blog already exists!";
+        private const string BLOG_CAN_NOT_BE_DELETED_TEXT = "This Blog cannot be deleted!";
 
         /// <summary>
         /// Create a new blog.
@@ -27,12 +27,12 @@ namespace Spoiler.Api.Controllers
         ///        "description": "Description goes here.",
         ///     }
         /// 
-        ///     POST /api/v1/blog/create (Returns 412)
+        ///     POST /api/v1/blog/create (Returns 400 - validation errors)
         ///     {
         ///        "title": "Title goes here.",
         ///     }
         ///     
-        ///     POST /api/v1/blog/create (Returns 400)
+        ///     POST /api/v1/blog/create (Returns 400 - business logic error)
         ///     {
         ///         "title": "no",
         ///         "description":"ok"
@@ -47,8 +47,7 @@ namespace Spoiler.Api.Controllers
         ///
         /// </remarks>
         /// <response code="201">OK Returns the newly created item.</response>
-        /// <response code="412">One or more validation errors occurred.</response>
-        /// <response code="400">Business logic error.</response>
+        /// <response code="400">Business logic/validation errors.</response>
         /// <response code="500">Internal server error.</response>
         [Route("create")]
         [HttpPost]
@@ -56,7 +55,7 @@ namespace Spoiler.Api.Controllers
         public IActionResult Create([FromBody] CreateBlogRequest newBlog)
         {
             if (!ModelState.IsValid)
-                return ValidationProblem(statusCode: 412);
+                return ValidationProblem(statusCode: StatusCodes.Status400BadRequest);
 
             if (newBlog.Title == "no")
                 return Problem(BLOG_ALREADY_EXISTS_TEXT, statusCode: StatusCodes.Status400BadRequest);
@@ -64,11 +63,60 @@ namespace Spoiler.Api.Controllers
             if (Requested500Response(newBlog.Title!))
                 return Problem(GENERAL_EXCEPTION_TEXT, statusCode: StatusCodes.Status500InternalServerError);
 
-            var responseDto = Blog.Create(newBlog, _blogs);
+            var responseDto = Blog.Create(newBlog);
 
             return Created(Request.Path, responseDto);
         }
 
+        /// <summary>
+        /// Update an existing blog.
+        /// </summary>
+        /// <param name="blogToUpdate"></param>
+        /// <returns></returns>
+        /// <remarks>
+        /// Sample request:
+        ///
+        ///     POST /api/v1/blog/update (Returns 200)
+        ///     {
+        ///        "id": "id_of_an_existing_item"
+        ///        "title": "Title goes here.",
+        ///        "description": "Description goes here.",
+        ///     }
+        /// 
+        ///     POST /api/v1/blog/update (Returns 400 - validation errors)
+        ///     {
+        ///        "title": "Title goes here.",
+        ///     }
+        /// 
+        ///     POST /api/v1/blog/update (Returns 500)
+        ///     {
+        ///        "id": "500",
+        ///     }
+        ///  
+        ///
+        /// </remarks>
+        /// <response code="200">OK Returns the updated item.</response>
+        /// <response code="400">Business logic/validation errors.</response>
+        /// <response code="404">Item not found.</response>
+        /// <response code="500">Internal server error.</response>
+        [Route("update")]
+        [HttpPost]
+        [ProducesResponseType(typeof(BlogDto), StatusCodes.Status200OK)]
+        public IActionResult Update([FromBody] Blog blogToUpdate)
+        {
+            if (Requested500Response(blogToUpdate?.Id!))
+                return Problem(GENERAL_EXCEPTION_TEXT, statusCode: StatusCodes.Status500InternalServerError);
+
+            if (!ModelState.IsValid)
+                return ValidationProblem(statusCode: StatusCodes.Status400BadRequest);
+
+            var updatedBlog = Blog.Update(blogToUpdate);
+
+            if(updatedBlog is null)
+                return NotFound(NOT_FOUND_TEXT);
+
+            return Ok(new BlogDto(updatedBlog));
+        }
 
         /// <summary>
         /// Get blog by id.
@@ -94,7 +142,7 @@ namespace Spoiler.Api.Controllers
             if (Requested500Response(id))
                 return Problem(GENERAL_EXCEPTION_TEXT, statusCode: StatusCodes.Status500InternalServerError);
 
-            var foundBlog = GetBlogById(id);
+            var foundBlog = Blog.GetById(id);
 
             if (foundBlog is null)
                 return NotFound(NOT_FOUND_TEXT);
@@ -110,12 +158,15 @@ namespace Spoiler.Api.Controllers
         /// <remarks>
         /// Sample requests:
         ///
-        ///     GET /api/v1/blog/any-id-goes-here (Returns 204, or 404)
+        ///     DELETE /api/v1/blog/any-id-goes-here (Returns 204, or 404)
         /// 
-        ///     GET /api/v1/blog/500 (Returns 500)
+        ///     DELETE /api/v1/blog/05cf7a03-3747-4e1a-890e-af67e35b039f (Returns 400 - business logic error)
+        /// 
+        ///     DELETE /api/v1/blog/500 (Returns 500)
         ///     
         /// </remarks>
         /// <response code="204">Returns (No Content), indicates item deletion.</response>
+        /// <response code="400">Business logic/validation errors.</response>
         /// <response code="404">Item not found.</response>
         /// <response code="500">Internal server error.</response>
         [Route("{id}")]
@@ -126,15 +177,18 @@ namespace Spoiler.Api.Controllers
             if (Requested500Response(id))
                 return Problem(GENERAL_EXCEPTION_TEXT, statusCode: StatusCodes.Status500InternalServerError);
 
-            if (!_blogs.Remove(GetBlogById(id)!))
+            if(Requested400BusinessLogicError(id))
+                return Problem(BLOG_CAN_NOT_BE_DELETED_TEXT, statusCode: StatusCodes.Status400BadRequest);
+
+            if (!Blog.BLOGS.Remove(Blog.GetById(id)!))
                 return NotFound(NOT_FOUND_TEXT);
 
             return NoContent();
         }
 
-        private static Blog? GetBlogById(string id)
+        private static bool Requested400BusinessLogicError(string id)
         {
-            return _blogs.FirstOrDefault(a => a.Id == id);
+            return id == Blog.DEFAULT_BLOG_ID;
         }
 
         private static bool Requested500Response(string indicator)
