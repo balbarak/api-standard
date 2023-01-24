@@ -1,4 +1,6 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Spoiler.Api.Helpers;
 
 namespace Spoiler.Api.Controllers
 {
@@ -179,6 +181,73 @@ namespace Spoiler.Api.Controllers
                 return NotFound(MessagesText.BLOG_NOT_FOUND);
 
             return NoContent();
+        }
+
+        /// <summary>
+        /// Get blog by id.
+        /// </summary>
+        /// <param name="id">the blog's id.</param>
+        /// <returns></returns>
+        /// <remarks>
+        /// Sample requests:
+        ///
+        ///     GET /api/v1/blog/secured (Returns 200, or 404)
+        ///     
+        ///     GET /api/v1/blog/secured/500 (Returns 500)
+        ///     
+        /// </remarks>
+        /// <response code="200">Returns the default blog.</response>
+        /// <response code="400">Business logic/validation errors.</response>
+        /// <response code="401">Not Authorized.</response>
+        /// <response code="404">Item not found.</response>
+        /// <response code="500">Internal server error.</response>
+        [HttpGet("secured"), Authorize]
+        [ProducesResponseType(typeof(BlogDto), StatusCodes.Status200OK)]
+        public IActionResult Secured(string id)
+        {
+            if (Requested500Response(id))
+                return Problem(MessagesText.GENERAL_EXCEPTION, statusCode: StatusCodes.Status500InternalServerError);
+
+            var foundBlog = Blog.GetById(Blog.DEFAULT_BLOG_ID);
+
+            if (foundBlog is null)
+                return NotFound(MessagesText.BLOG_NOT_FOUND);
+
+            return Ok(new BlogDto(foundBlog));
+        }
+
+        /// <summary>
+        /// Get blog by id.
+        /// </summary>
+        /// <param name="id">the blog's id.</param>
+        /// <returns></returns>
+        /// <remarks>
+        /// Sample requests:
+        ///
+        ///     GET /api/v1/blog/secured (Returns 200, or 404)
+        ///     
+        ///     GET /api/v1/blog/secured/500 (Returns 500)
+        ///     
+        /// </remarks>
+        /// <response code="200">Returns the default blog.</response>
+        /// <response code="400">Business logic/validation errors.</response>
+        /// <response code="401">Not Authorized.</response>
+        /// <response code="403">Insufficient role.</response>
+        /// <response code="404">Item not found.</response>
+        /// <response code="500">Internal server error.</response>
+        [HttpGet("secured-role"), Authorize(Roles = "Developer")]
+        [ProducesResponseType(typeof(BlogDto), StatusCodes.Status200OK)]
+        public IActionResult SecuredRole(string id)
+        {
+            if (Requested500Response(id))
+                return Problem(MessagesText.GENERAL_EXCEPTION, statusCode: StatusCodes.Status500InternalServerError);
+
+            var foundBlog = Blog.GetById(Blog.DEFAULT_BLOG_ID);
+
+            if (foundBlog is null)
+                return NotFound(MessagesText.BLOG_NOT_FOUND);
+
+            return Ok(new BlogDto(foundBlog));
         }
 
         private static bool Requested500Response(string indicator)
