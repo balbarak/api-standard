@@ -72,6 +72,7 @@ namespace Spoiler.Api
             });
 
             ConfigureAuthentication(builder, jwtConfig);
+            builder.Services.AddSingleton<IBlogService, BlogService>();
 
             var app = builder.Build();
 
