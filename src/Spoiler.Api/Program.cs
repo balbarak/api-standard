@@ -71,6 +71,8 @@ namespace Spoiler.Api
                 options.SuppressModelStateInvalidFilter = true;
             });
 
+            builder.Services.AddRouting(options => options.LowercaseUrls = true);
+
             ConfigureAuthentication(builder, jwtConfig);
             builder.Services.AddSingleton<IBlogService, BlogService>();
 
