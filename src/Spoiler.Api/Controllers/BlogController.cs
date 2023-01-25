@@ -102,7 +102,7 @@ namespace Spoiler.Api.Controllers
         /// </remarks>
         /// <response code="200">OK Returns the updated item.</response>
         /// <response code="400">Business logic/validation errors.</response>
-        /// <response code="404">Item not found.</response>
+        /// <response code="404">Blog not found.</response>
         /// <response code="500">Internal server error.</response>
         [Route("update")]
         [HttpPost]
@@ -124,6 +124,37 @@ namespace Spoiler.Api.Controllers
         }
 
         /// <summary>
+        /// Search posts.
+        /// </summary>
+        /// <param name="search">Search criteria.</param>
+        /// <returns></returns>
+        /// <remarks>
+        /// Sample requests:
+        ///
+        ///     GET /api/v1/blog (Returns 200, or 204)
+        ///     
+        ///     GET /api/v1/blog?keyword=500 (Returns 500)
+        ///     
+        /// </remarks>
+        /// <response code="200">Returns blog items.</response>
+        /// <response code="204">If there is no result.</response>
+        /// <response code="500">Internal server error.</response>
+        [HttpGet]
+        [ProducesResponseType(typeof(BlogSearchResult), StatusCodes.Status200OK)]
+        public IActionResult Get([FromQuery] BlogSearch search)
+        {
+            if (Requested500Response(search.Keyword!))
+                return Problem(MessagesText.GENERAL_EXCEPTION, statusCode: StatusCodes.Status500InternalServerError);
+
+            var searchResult = Blog.Search(search);
+
+            if (searchResult?.Items is null || !searchResult.Items.Any())
+                return NoContent();
+
+            return Ok(searchResult);
+        }
+
+        /// <summary>
         /// Get blog by id.
         /// </summary>
         /// <param name="id"></param>
@@ -137,7 +168,7 @@ namespace Spoiler.Api.Controllers
         ///     
         /// </remarks>
         /// <response code="200">Returns blog item.</response>
-        /// <response code="404">Item not found.</response>
+        /// <response code="404">Blog not found.</response>
         /// <response code="500">Internal server error.</response>
         [Route("{id}")]
         [HttpGet]
@@ -172,7 +203,7 @@ namespace Spoiler.Api.Controllers
         /// </remarks>
         /// <response code="204">Returns (No Content), indicates item deletion.</response>
         /// <response code="400">Business logic/validation errors.</response>
-        /// <response code="404">Item not found.</response>
+        /// <response code="404">Blog not found.</response>
         /// <response code="500">Internal server error.</response>
         [Route("{id}")]
         [HttpDelete]

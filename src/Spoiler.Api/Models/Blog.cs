@@ -22,6 +22,27 @@ namespace Spoiler.Api.Models
             Title = create.Title;
             Description = create.Description;
         }
+
+
+        public static BlogSearchResult Search(BlogSearch search)
+        {
+            Func<Blog, bool> predicate = a => true;
+            if (!string.IsNullOrEmpty(search.Keyword))
+            {
+                predicate = a => a.Title!.Contains(search.Keyword, StringComparison.InvariantCultureIgnoreCase)
+                || a.Description!.Contains(search.Keyword, StringComparison.InvariantCultureIgnoreCase);
+            }
+
+            var query = BLOGS.Where(predicate);
+            var count = query.Count();
+            var items = query
+                .Skip((search.PageNumber - 1) * search.PageSize)
+                .Take(search.PageSize)
+                .Select(blog => new BlogDto(blog))
+                .ToList().AsReadOnly();
+
+            return new BlogSearchResult(search, items, count);
+        }
     }
 
     public class CreateBlogRequest
