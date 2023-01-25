@@ -146,7 +146,7 @@ namespace Spoiler.Api.Controllers
             if (Requested500Response(search.Keyword!))
                 return Problem(MessagesText.GENERAL_EXCEPTION, statusCode: StatusCodes.Status500InternalServerError);
 
-            var searchResult = Blog.Search(search);
+            var searchResult = _blogService.Search(search);
 
             if (searchResult?.Items is null || !searchResult.Items.Any())
                 return NoContent();

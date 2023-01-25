@@ -8,6 +8,7 @@ namespace Spoiler.Api.Services
         BlogDto Create(CreateBlogRequest create);
         Blog? GetById(string id);
         Blog? Update(Blog? blog);
+        BlogSearchResult Search(BlogSearch search);
     }
 
     public class BlogService : IBlogService
@@ -49,6 +50,26 @@ namespace Spoiler.Api.Services
         public bool CanBeDeleted(string id)
         {
             return id != DEFAULT_BLOG_ID;
+        }
+
+        public BlogSearchResult Search(BlogSearch search)
+        {
+            Func<Blog, bool> predicate = a => true;
+            if (!string.IsNullOrEmpty(search.Keyword))
+            {
+                predicate = a => a.Title!.Contains(search.Keyword, StringComparison.InvariantCultureIgnoreCase)
+                || a.Description!.Contains(search.Keyword, StringComparison.InvariantCultureIgnoreCase);
+            }
+
+            var query = BLOGS.Where(predicate);
+            var count = query.Count();
+            var items = query
+                .Skip((search.PageNumber - 1) * search.PageSize)
+                .Take(search.PageSize)
+                .Select(blog => new BlogDto(blog))
+                .ToList().AsReadOnly();
+
+            return new BlogSearchResult(search, items, count);
         }
 
         private static Blog CreateDefault()
