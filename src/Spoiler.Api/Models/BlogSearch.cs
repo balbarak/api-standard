@@ -1,11 +1,8 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using System.ComponentModel.DataAnnotations;
-
-namespace Spoiler.Api.Models
+﻿namespace Spoiler.Api.Models
 {
     public class BlogSearch
     {
-        private const int MaxPageSize = 100;
+        private const int MAX_PAGE_SIZE = 100;
 
         public string? Keyword { get; set; }
         
@@ -19,7 +16,7 @@ namespace Spoiler.Api.Models
             }
             set
             {
-                _pageSize = (value > MaxPageSize) ? MaxPageSize : value;
+                _pageSize = (value > MAX_PAGE_SIZE) ? MAX_PAGE_SIZE : value;
             }
         }
     }
