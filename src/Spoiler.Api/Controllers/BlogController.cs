@@ -1,4 +1,7 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Spoiler.Api.Helpers;
+using Spoiler.Api.Services;
 
 namespace Spoiler.Api.Controllers
 {
@@ -8,6 +11,13 @@ namespace Spoiler.Api.Controllers
     [Produces("application/json")]
     public class BlogController : ControllerBase
     {
+        private readonly IBlogService _blogService;
+
+        public BlogController(IBlogService blogService)
+        {
+            _blogService = blogService;
+        }
+
         /// <summary>
         /// Create a new blog.
         /// </summary>
@@ -58,7 +68,7 @@ namespace Spoiler.Api.Controllers
             if (Requested500Response(newBlog.Title!))
                 return Problem(MessagesText.GENERAL_EXCEPTION, statusCode: StatusCodes.Status500InternalServerError);
 
-            var responseDto = Blog.Create(newBlog);
+            var responseDto = _blogService.Create(newBlog);
 
             return Created(Request.Path, responseDto);
         }
@@ -105,7 +115,7 @@ namespace Spoiler.Api.Controllers
             if (!ModelState.IsValid)
                 return ValidationProblem(statusCode: StatusCodes.Status400BadRequest);
 
-            var updatedBlog = Blog.Update(blogToUpdate);
+            var updatedBlog = _blogService.Update(blogToUpdate);
 
             if(updatedBlog is null)
                 return NotFound(MessagesText.BLOG_NOT_FOUND);
@@ -136,7 +146,7 @@ namespace Spoiler.Api.Controllers
             if (Requested500Response(search.Keyword!))
                 return Problem(MessagesText.GENERAL_EXCEPTION, statusCode: StatusCodes.Status500InternalServerError);
 
-            var searchResult = Blog.Search(search);
+            var searchResult = _blogService.Search(search);
 
             if (searchResult?.Items is null || !searchResult.Items.Any())
                 return NoContent();
@@ -168,7 +178,7 @@ namespace Spoiler.Api.Controllers
             if (Requested500Response(id))
                 return Problem(MessagesText.GENERAL_EXCEPTION, statusCode: StatusCodes.Status500InternalServerError);
 
-            var foundBlog = Blog.GetById(id);
+            var foundBlog = _blogService.GetById(id);
 
             if (foundBlog is null)
                 return NotFound(MessagesText.BLOG_NOT_FOUND);
@@ -203,13 +213,80 @@ namespace Spoiler.Api.Controllers
             if (Requested500Response(id))
                 return Problem(MessagesText.GENERAL_EXCEPTION, statusCode: StatusCodes.Status500InternalServerError);
 
-            if(!Blog.CanBeDeleted(id))
+            if(!_blogService.CanBeDeleted(id))
                 return Problem(MessagesText.BLOG_CAN_NOT_BE_DELETED, statusCode: StatusCodes.Status400BadRequest);
 
-            if (!Blog.BLOGS.Remove(Blog.GetById(id)!))
+            if (!BlogService.BLOGS.Remove(_blogService.GetById(id)!))
                 return NotFound(MessagesText.BLOG_NOT_FOUND);
 
             return NoContent();
+        }
+
+        /// <summary>
+        /// Get blog by id.
+        /// </summary>
+        /// <param name="id">the blog's id.</param>
+        /// <returns></returns>
+        /// <remarks>
+        /// Sample requests:
+        ///
+        ///     GET /api/v1/blog/secured (Returns 200, or 404)
+        ///     
+        ///     GET /api/v1/blog/secured/500 (Returns 500)
+        ///     
+        /// </remarks>
+        /// <response code="200">Returns the default blog.</response>
+        /// <response code="400">Business logic/validation errors.</response>
+        /// <response code="401">Not Authorized.</response>
+        /// <response code="404">Item not found.</response>
+        /// <response code="500">Internal server error.</response>
+        [HttpGet("secured"), Authorize]
+        [ProducesResponseType(typeof(BlogDto), StatusCodes.Status200OK)]
+        public IActionResult Secured(string id)
+        {
+            if (Requested500Response(id))
+                return Problem(MessagesText.GENERAL_EXCEPTION, statusCode: StatusCodes.Status500InternalServerError);
+
+            var foundBlog = _blogService.GetById(BlogService.DEFAULT_BLOG_ID);
+
+            if (foundBlog is null)
+                return NotFound(MessagesText.BLOG_NOT_FOUND);
+
+            return Ok(new BlogDto(foundBlog));
+        }
+
+        /// <summary>
+        /// Get blog by id.
+        /// </summary>
+        /// <param name="id">the blog's id.</param>
+        /// <returns></returns>
+        /// <remarks>
+        /// Sample requests:
+        ///
+        ///     GET /api/v1/blog/secured (Returns 200, or 404)
+        ///     
+        ///     GET /api/v1/blog/secured/500 (Returns 500)
+        ///     
+        /// </remarks>
+        /// <response code="200">Returns the default blog.</response>
+        /// <response code="400">Business logic/validation errors.</response>
+        /// <response code="401">Not Authorized.</response>
+        /// <response code="403">Insufficient role.</response>
+        /// <response code="404">Item not found.</response>
+        /// <response code="500">Internal server error.</response>
+        [HttpGet("secured-role"), Authorize(Roles = "Developer")]
+        [ProducesResponseType(typeof(BlogDto), StatusCodes.Status200OK)]
+        public IActionResult SecuredRole(string id)
+        {
+            if (Requested500Response(id))
+                return Problem(MessagesText.GENERAL_EXCEPTION, statusCode: StatusCodes.Status500InternalServerError);
+
+            var foundBlog = _blogService.GetById(BlogService.DEFAULT_BLOG_ID);
+
+            if (foundBlog is null)
+                return NotFound(MessagesText.BLOG_NOT_FOUND);
+
+            return Ok(new BlogDto(foundBlog));
         }
 
         private static bool Requested500Response(string indicator)
