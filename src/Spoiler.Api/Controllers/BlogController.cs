@@ -131,13 +131,12 @@ namespace Spoiler.Api.Controllers
         /// <remarks>
         /// Sample requests:
         ///
-        ///     GET /api/v1/blog (Returns 200, or 204)
+        ///     GET /api/v1/blog (Returns 200)
         ///     
         ///     GET /api/v1/blog?keyword=500 (Returns 500)
         ///     
         /// </remarks>
-        /// <response code="200">Returns blog items.</response>
-        /// <response code="204">If there is no result.</response>
+        /// <response code="200">Returns blog items. An empty list if the result is empty.</response>
         /// <response code="500">Internal server error.</response>
         [HttpGet]
         [ProducesResponseType(typeof(BlogSearchResult), StatusCodes.Status200OK)]
@@ -148,8 +147,10 @@ namespace Spoiler.Api.Controllers
 
             var searchResult = _blogService.Search(search);
 
-            if (searchResult?.Items is null || !searchResult.Items.Any())
-                return NoContent();
+            //if you want to follow microsoft best practicies:
+            //https://learn.microsoft.com/en-us/azure/architecture/best-practices/api-design#empty-sets-in-message-bodies
+            //if (searchResult?.Items is null || !searchResult.Items.Any())
+            //    return NoContent();
 
             return Ok(searchResult);
         }
